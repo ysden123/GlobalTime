@@ -1,0 +1,2 @@
+# GlobalTime
+Getting global time
