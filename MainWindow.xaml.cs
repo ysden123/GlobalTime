@@ -84,17 +84,15 @@ namespace GlobalTime
                 try
                 {
                     var response = httpClient.GetAsync($"https://api.api-ninjas.com/v1/timezone?timezone={cityConfig.TimeZone}").Result;
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var currentTime = JsonSerializer.Deserialize<CurrentTime>(response.Content.ReadAsStringAsync().Result);
 
-                        return new TimeItem(cityConfig.Name ?? "Unknown", currentTime?.LocalTime ?? "Error");
-                    }
-                    else
-                    {
-                        _logger.Error("Failed to fetch time for {City}: {StatusCode}", cityConfig.Name, response.StatusCode);
-                        return new TimeItem(cityConfig.Name ?? "Unknown", "Error fetching time");
-                    }
+                    response.EnsureSuccessStatusCode();
+
+
+                    var currentTime = JsonSerializer.Deserialize<CurrentTime>(response.Content.ReadAsStringAsync().Result);
+
+                    response.Dispose();
+
+                    return new TimeItem(cityConfig.Name ?? "Unknown", currentTime?.LocalTime ?? "Error");
                 }
                 catch (Exception ex)
                 {
