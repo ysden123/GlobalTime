@@ -56,25 +56,25 @@ namespace GlobalTime
         {
             Configuration? configuration = Configuration.ReadConfiguration();
             var timeItems = new List<TimeItem>();
-            using (HttpClient httpClient = new HttpClient())
+            using HttpClient httpClient = new();
+            httpClient.DefaultRequestHeaders.Add("X-Api-Key", configuration?.ApiKey);
+            List<Task<TimeItem>> fetchTasks = [];
+            if (configuration != null && configuration.Cities != null)
             {
-                httpClient.DefaultRequestHeaders.Add("X-Api-Key", configuration?.ApiKey);
-                List<Task<TimeItem>> fetchTasks = new List<Task<TimeItem>>();
-                if (configuration != null && configuration.Cities != null)
+                foreach (var cityConfig in configuration.Cities)
                 {
-                    foreach (var cityConfig in configuration.Cities)
-                    {
-                        fetchTasks.Add(FetchTimeForCityAsync(httpClient, cityConfig));
-                    }
+                    fetchTasks.Add(FetchTimeForCityAsync(httpClient, cityConfig));
                 }
-
-                await Task.WhenAll(fetchTasks);
-                foreach (var task in fetchTasks)
-                {
-                    timeItems.Add(task.Result);
-                }
-                return timeItems;
             }
+
+            await Task.WhenAll(fetchTasks);
+            foreach (var task in fetchTasks)
+            {
+                timeItems.Add(task.Result);
+            }
+            timeItems.Sort((a, b) => string.Compare(a.City, b.City, StringComparison.Ordinal));
+
+            return timeItems;
         }
 
         private Task<TimeItem> FetchTimeForCityAsync(HttpClient httpClient, CityConfig cityConfig)
@@ -83,14 +83,11 @@ namespace GlobalTime
             {
                 try
                 {
-                    var response = httpClient.GetAsync($"https://api.api-ninjas.com/v1/timezone?timezone={cityConfig.TimeZone}").Result;
+                    using HttpResponseMessage httpResponse = httpClient.GetAsync($"https://api.api-ninjas.com/v1/timezone?timezone={cityConfig.TimeZone}").Result;
 
-                    response.EnsureSuccessStatusCode();
+                    httpResponse.EnsureSuccessStatusCode();
 
-
-                    var currentTime = JsonSerializer.Deserialize<CurrentTime>(response.Content.ReadAsStringAsync().Result);
-
-                    response.Dispose();
+                    var currentTime = JsonSerializer.Deserialize<CurrentTime>(httpResponse.Content.ReadAsStringAsync().Result);
 
                     return new TimeItem(cityConfig.Name ?? "Unknown", currentTime?.LocalTime ?? "Error");
                 }
