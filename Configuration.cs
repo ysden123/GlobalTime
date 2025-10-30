@@ -38,7 +38,7 @@ namespace GlobalTime
 
         public override string ToString()
         {
-            return $"CityConfig: {JsonSerializer.Serialize<Configuration>(this)}";
+            return $"Configuration: {JsonSerializer.Serialize<Configuration>(this)}";
         }
     }
 }
